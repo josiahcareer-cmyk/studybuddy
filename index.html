@@ -81,77 +81,89 @@
 
   <!-- App Script -->
   <script>
-    const API_KEY = "AQ.Ab8RN6IkQykV_LJ1cdtybKsiN2GU5EObA5hvnys5vCRpjFt6Tg";
+  // Paste your Gemini API key inside the quotes below
+  const API_KEY = "AQ.Ab8RN6Ky5P24tGT3ICf7TWQYev..."; 
 
-    let remainingUses = localStorage.getItem('studybuddy_free_uses') !== null 
-      ? parseInt(localStorage.getItem('studybuddy_free_uses')) 
-      : 5;
+  // Detect user's browser language automatically (e.g., 'es', 'fr', 'yo', 'ha', 'ig', 'zh')
+  const userLanguage = window.navigator.userLanguage || window.navigator.language || "en";
 
-    document.getElementById('usage-count').innerText = remainingUses;
+  let remainingUses = localStorage.getItem('studybuddy_uses') 
+    ? parseInt(localStorage.getItem('studybuddy_uses')) 
+    : 5;
 
-    function toggleModal(show) {
-      document.getElementById('premium-modal').classList.toggle('hidden', !show);
+  function toggleModal(show) {
+    document.getElementById('premium-modal').classList.toggle('hidden', !show);
+  }
+
+  async function handleSend(e) {
+    e.preventDefault();
+    const inputEl = document.getElementById('user-input');
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    if (remainingUses <= 0) {
+      toggleModal(true);
+      return;
     }
 
-    async function handleSend(e) {
-      e.preventDefault();
-      const inputEl = document.getElementById('user-input');
-      const text = inputEl.value.trim();
-      if (!text) return;
+    appendMessage(text, 'user');
+    inputEl.value = '';
 
-      if (remainingUses <= 0) {
-        toggleModal(true);
-        return;
-      }
+    remainingUses--;
+    localStorage.setItem('studybuddy_uses', remainingUses);
 
-      appendMessage(text, 'user');
-      inputEl.value = '';
+    const loadingId = appendMessage('Thinking...', 'bot');
 
-      remainingUses--;
-      localStorage.setItem('studybuddy_free_uses', remainingUses);
-      document.getElementById('usage-count').innerText = remainingUses;
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ 
+              text: `You are StudyBuddy, an empathetic and clear AI tutor. The user's browser locale is "${userLanguage}". Automatically detect the user's input language and reply directly in that language (or in their primary locale language if they ask a simple question). Keep explanations concise and clear.` 
+            }]
+          },
+          contents: [{ parts: [{ text: text }] }]
+        })
+      });
 
-      const loadingId = appendMessage('Thinking...', 'ai');
+      const data = await response.json();
+      const botMsgEl = document.getElementById(loadingId);
 
-      try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: `You are StudyBuddy, an encouraging and clear AI tutor for students. Answer this study question concisely and clearly: ${text}` }] }]
-          })
-        });
-
-        const data = await response.json();
-        const aiAnswer = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that question right now. Please try again!";
-        
-        document.getElementById(loadingId).innerText = aiAnswer;
-      } catch (err) {
-        document.getElementById(loadingId).innerText = "Unable to connect to AI server. Please check your internet connection.";
-      }
-    }
-
-    function appendMessage(text, sender) {
-      const chatBox = document.getElementById('chat-box');
-      const msgDiv = document.createElement('div');
-      const id = 'msg-' + Date.now();
-      msgDiv.id = id;
-
-      if (sender === 'user') {
-        msgDiv.className = 'bg-indigo-600 text-white p-3.5 rounded-2xl shadow-sm max-w-xs ml-auto text-sm';
+      if (data.candidates && data.candidates[0].content.parts[0].text) {
+        botMsgEl.innerText = data.candidates[0].content.parts[0].text;
       } else {
-        msgDiv.className = 'bg-white text-slate-800 p-3.5 rounded-2xl shadow-sm border border-slate-100 max-w-xs mr-auto text-sm';
+        botMsgEl.innerText = "Sorry, I couldn't process that question right now. Please check your API key!";
       }
+    } catch (err) {
+      document.getElementById(loadingId).innerText = "Error connecting to AI service.";
+    }
+  }
 
-      msgDiv.innerText = text;
-      chatBox.appendChild(msgDiv);
-      chatBox.scrollTop = chatBox.scrollHeight;
-      return id;
+  function appendMessage(text, sender) {
+    const chatBox = document.getElementById('chat-box');
+    const msgDiv = document.createElement('div');
+    const id = 'msg-' + Date.now();
+    msgDiv.id = id;
+
+    if (sender === 'user') {
+      msgDiv.className = 'bg-indigo-600 text-white p-3 rounded-2xl max-w-xs ml-auto text-sm my-2';
+    } else {
+      msgDiv.className = 'bg-white text-slate-800 p-3 rounded-2xl max-w-xs text-sm my-2 border border-slate-100';
     }
 
-    function handlePayment() {
-      alert("Payment gateway coming soon! You will be redirected to Paystack/Flutterwave.");
-    }
+    msgDiv.innerText = text;
+    chatBox.appendChild(msgDiv);
+    chatBox.scrollTop = chatBox.scrollHeight;
+    return id;
+  }
+
+  function handlePayment() {
+    alert("Payment gateway coming soon!");
+  }
+</script>
+
   </script>
 </body>
 </html>
