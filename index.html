@@ -2,168 +2,262 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>StudyBuddy - AI Study Assistant</title>
-  <link rel="manifest" href="/manifest.json" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StudyBuddy AI</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
 
-  <!-- Header -->
-  <header class="bg-indigo-600 text-white p-4 sticky top-0 z-10 flex justify-between items-center shadow-md">
-    <div class="flex items-center space-x-2">
-      <span class="text-2xl">📚</span>
-      <h1 class="text-xl font-bold">StudyBuddy</h1>
+  <!-- Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-40">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">📚</span>
+        <h1 class="font-bold text-lg text-indigo-400">StudyBuddy AI</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="usage-badge" class="text-xs bg-slate-800 px-2.5 py-1 rounded-full text-slate-400 border border-slate-700">
+          5 / 5 free prompts left
+        </span>
+        <button onclick="togglePricingModal()" class="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-xs px-3 py-1.5 rounded-lg font-medium shadow-sm transition">
+          Upgrade Pro ✨
+        </button>
+      </div>
     </div>
-    <button onclick="toggleModal(true)" class="bg-amber-400 hover:bg-amber-500 text-slate-900 font-semibold text-xs px-3 py-1.5 rounded-full shadow">
-      👑 Go Premium
-    </button>
   </header>
 
-  <!-- Usage Counter Bar -->
-  <div class="bg-indigo-50 border-b border-indigo-100 px-4 py-2 text-xs flex justify-between items-center text-indigo-900">
-    <span>Free Plan: <strong id="usage-count">5</strong> daily requests left</span>
-    <span class="text-indigo-600 font-medium">Reset daily</span>
-  </div>
+  <!-- Main Chat Container -->
+  <main class="flex-1 max-w-4xl w-full mx-auto p-4 flex flex-col justify-between">
+    <!-- Messages Area -->
+    <div id="chat-box" class="flex-1 overflow-y-auto space-y-4 mb-4 pb-20">
+      <div class="bg-slate-800/80 border border-slate-700/50 p-4 rounded-xl text-sm leading-relaxed max-w-[85%]">
+        👋 Hi! I'm your AI Study Buddy. Ask me anything, or tap <strong>📎 Upload</strong> to send me photos or documents of your homework!
+      </div>
+    </div>
 
-  <!-- Chat / Content Area -->
-  <main id="chat-box" class="flex-1 p-4 overflow-y-auto space-y-4">
-    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 max-w-sm">
-      <p class="text-sm">👋 <strong>Hi! I'm StudyBuddy.</strong> Ask me anything about your homework, summaries, or exam revision!</p>
+    <!-- Input Bar -->
+    <div class="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-slate-800 p-3">
+      <div class="max-w-4xl mx-auto flex flex-col gap-2">
+        
+        <!-- File Preview Bar -->
+        <div id="file-preview-bar" class="hidden flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg text-xs text-indigo-300">
+          <span>📄 Attached: <strong id="file-name-label">filename.pdf</strong></span>
+          <button onclick="clearAttachment()" class="text-slate-400 hover:text-white font-bold ml-auto">✕</button>
+        </div>
+
+        <!-- Inputs Wrapper -->
+        <div class="flex items-center gap-2">
+          <!-- File Upload Button -->
+          <label for="file-upload" class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 p-2.5 rounded-xl text-sm flex items-center justify-center transition">
+            📎
+            <input id="file-upload" type="file" accept="image/*,.pdf,.txt" class="hidden" onchange="handleFileSelect(event)" />
+          </label>
+
+          <!-- Text Prompt Input -->
+          <input id="user-input" type="text" placeholder="Ask a question or request homework help..." 
+            class="flex-1 bg-slate-800 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            onkeydown="if(event.key === 'Enter') sendMessage()" />
+
+          <!-- Send Button -->
+          <button onclick="sendMessage()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2.5 rounded-xl font-medium text-sm transition">
+            Send
+          </button>
+        </div>
+      </div>
     </div>
   </main>
 
-  <!-- Input Area -->
-  <footer class="bg-white p-3 border-t border-slate-200 sticky bottom-0">
-    <form id="chat-form" onsubmit="handleSend(event)" class="flex items-center gap-2">
-      <input 
-        type="text" 
-        id="user-input" 
-        placeholder="Type a study question..." 
-        class="flex-1 bg-slate-100 text-slate-800 text-sm px-4 py-3 rounded-full outline-none focus:ring-2 focus:ring-indigo-500" 
-        required 
-      />
-      <button type="submit" class="bg-indigo-600 text-white font-medium px-5 py-3 rounded-full text-sm hover:bg-indigo-700">
-        Send
-      </button>
-    </form>
-  </footer>
-
-  <!-- Upgrade Modal -->
-  <div id="premium-modal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4 shadow-xl">
-      <div class="text-4xl">🚀</div>
-      <h2 class="text-xl font-bold text-slate-900">Upgrade to StudyBuddy Premium</h2>
-      <p class="text-sm text-slate-600">Get unlimited AI explanations, PDF homework upload, and priority exam study notes.</p>
+  <!-- Pricing Modal -->
+  <div id="pricing-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-lg w-full p-6 text-slate-100 relative shadow-2xl">
+      <button onclick="togglePricingModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">✕</button>
       
-      <div class="bg-indigo-50 p-4 rounded-xl text-left space-y-2 border border-indigo-100 text-sm">
-        <div class="flex items-center text-slate-700">✅ Unlimited daily AI requests</div>
-        <div class="flex items-center text-slate-700">✅ Step-by-step math solver</div>
-        <div class="flex items-center text-slate-700">✅ PDF & assignment summarizer</div>
+      <div class="text-center mb-6">
+        <h2 class="text-2xl font-bold text-white">Upgrade to StudyBuddy Pro</h2>
+        <p class="text-xs text-slate-400 mt-1">Unlock unlimited AI requests and instant homework solving.</p>
+        
+        <!-- Monthly vs Yearly Toggle -->
+        <div class="flex items-center justify-center gap-3 mt-4 bg-slate-900 p-1 rounded-xl w-max mx-auto border border-slate-700">
+          <button id="btn-monthly" onclick="setBillingCycle('monthly')" class="px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">Monthly</button>
+          <button id="btn-yearly" onclick="setBillingCycle('yearly')" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">
+            Yearly <span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded ml-1">Save 35%</span>
+          </button>
+        </div>
       </div>
 
-      <div class="text-2xl font-bold text-slate-900">
-        ₦6,650 <span class="text-xs text-slate-500 font-normal">/ month ($5)</span>
+      <!-- Plan Cards Grid -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <!-- Free Tier Card -->
+        <div class="border border-slate-700 rounded-xl p-4 bg-slate-900/50 flex flex-col justify-between">
+          <div>
+            <h3 class="font-bold text-slate-300">Free Tier</h3>
+            <div class="text-2xl font-bold my-2">$0 <span class="text-xs font-normal text-slate-400">/ forever</span></div>
+            <ul class="text-xs text-slate-400 space-y-2 mt-3">
+              <li>✓ 5 AI questions / day</li>
+              <li>✓ Text chat support</li>
+              <li>✕ File/Photo uploads</li>
+            </ul>
+          </div>
+          <button onclick="togglePricingModal()" class="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg">Current Plan</button>
+        </div>
+
+        <!-- Pro Tier Card -->
+        <div class="border-2 border-indigo-500 rounded-xl p-4 bg-indigo-950/30 flex flex-col justify-between relative">
+          <div>
+            <h3 class="font-bold text-indigo-400">Pro Upgrade</h3>
+            <div id="pro-price-display" class="text-2xl font-bold my-2">$6.99 <span class="text-xs font-normal text-slate-400">/ month</span></div>
+            <ul class="text-xs text-slate-300 space-y-2 mt-3">
+              <li>✓ Unlimited AI questions</li>
+              <li>✓ Image & PDF assignment analysis</li>
+              <li>✓ Fast response speeds</li>
+            </ul>
+          </div>
+          <button onclick="alert('Redirecting to Checkout...')" class="mt-4 w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg shadow">Upgrade Now</button>
+        </div>
       </div>
-
-      <button onclick="handlePayment()" class="w-full bg-indigo-600 text-white font-semibold py-3 rounded-xl shadow hover:bg-indigo-700 transition">
-        Unlock Unlimited Access
-      </button>
-
-      <button onclick="toggleModal(false)" class="text-xs text-slate-400 hover:text-slate-600 block w-full">
-        Maybe Later
-      </button>
     </div>
   </div>
 
-  <!-- App Script -->
   <script>
-  // Paste your Gemini API key inside the quotes below
-  const API_KEY = "AQ.Ab8RN6LqCmi0SzWkuzYghSIwPDEn6UhIP-mxDeGs5xaUaQbmqA..."; 
+    // Config & State
+    const API_KEY = "YOUR_GEMINI_API_KEY_HERE"; // Line 84: Replace with your AI Studio key
+    const DAILY_LIMIT = 5;
+    let attachedFile = null;
 
-  // Detect user's browser language automatically (e.g., 'es', 'fr', 'yo', 'ha', 'ig', 'zh')
-  const userLanguage = window.navigator.userLanguage || window.navigator.language || "en";
-
-  let remainingUses = localStorage.getItem('studybuddy_uses') 
-    ? parseInt(localStorage.getItem('studybuddy_uses')) 
-    : 5;
-
-  function toggleModal(show) {
-    document.getElementById('premium-modal').classList.toggle('hidden', !show);
-  }
-
-  async function handleSend(e) {
-    e.preventDefault();
-    const inputEl = document.getElementById('user-input');
-    const text = inputEl.value.trim();
-    if (!text) return;
-
-    if (remainingUses <= 0) {
-      toggleModal(true);
-      return;
+    // Daily Limit Initialization
+    let usageData = JSON.parse(localStorage.getItem('sb_usage')) || { count: 0, date: new Date().toDateString() };
+    if (usageData.date !== new Date().toDateString()) {
+      usageData = { count: 0, date: new Date().toDateString() };
+      localStorage.setItem('sb_usage', JSON.stringify(usageData));
     }
 
-    appendMessage(text, 'user');
-    inputEl.value = '';
+    function updateUsageBadge() {
+      const remaining = Math.max(0, DAILY_LIMIT - usageData.count);
+      document.getElementById('usage-badge').innerText = `${remaining} / ${DAILY_LIMIT} free prompts left`;
+    }
+    updateUsageBadge();
 
-    remainingUses--;
-    localStorage.setItem('studybuddy_uses', remainingUses);
+    // File Handling
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-    const loadingId = appendMessage('Thinking...', 'bot');
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        attachedFile = {
+          mimeType: file.type || "application/octet-stream",
+          base64: e.target.result.split(',')[1],
+          name: file.name
+        };
+        document.getElementById('file-name-label').innerText = file.name;
+        document.getElementById('file-preview-bar').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
 
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: {
-            parts: [{ 
-              text: `You are StudyBuddy, an empathetic and clear AI tutor. The user's browser locale is "${userLanguage}". Automatically detect the user's input language and reply directly in that language (or in their primary locale language if they ask a simple question). Keep explanations concise and clear.` 
-            }]
-          },
-          contents: [{ parts: [{ text: text }] }]
-        })
+    function clearAttachment() {
+      attachedFile = null;
+      document.getElementById('file-upload').value = "";
+      document.getElementById('file-preview-bar').classList.add('hidden');
+    }
+
+    // Modal & Pricing Logic
+    function togglePricingModal() {
+      document.getElementById('pricing-modal').classList.toggle('hidden');
+    }
+
+    function setBillingCycle(type) {
+      const btnMonthly = document.getElementById('btn-monthly');
+      const btnYearly = document.getElementById('btn-yearly');
+      const priceDisplay = document.getElementById('pro-price-display');
+
+      if (type === 'yearly') {
+        btnYearly.className = "px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
+        btnMonthly.className = "px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+        priceDisplay.innerHTML = "$49.99 <span class='text-xs font-normal text-slate-400'>/ year</span>";
+      } else {
+        btnMonthly.className = "px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
+        btnYearly.className = "px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+        priceDisplay.innerHTML = "$6.99 <span class='text-xs font-normal text-slate-400'>/ month</span>";
+      }
+    }
+
+    // Send Request to Gemini API
+    async function sendMessage() {
+      if (usageData.count >= DAILY_LIMIT) {
+        togglePricingModal();
+        return;
+      }
+
+      const inputField = document.getElementById('user-input');
+      const userText = inputField.value.trim();
+
+      if (!userText && !attachedFile) return;
+
+      const chatBox = document.getElementById('chat-box');
+
+      // Append User Bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = "bg-indigo-600 text-white p-4 rounded-xl text-sm leading-relaxed max-w-[85%] ml-auto";
+      userBubble.innerText = userText + (attachedFile ? `\n\n[Attached: ${attachedFile.name}]` : "");
+      chatBox.appendChild(userBubble);
+
+      // Clear input fields
+      inputField.value = "";
+      const currentAttachment = attachedFile;
+      clearAttachment();
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Append Loading Indicator
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = "bg-slate-800/80 border border-slate-700/50 p-4 rounded-xl text-sm text-slate-400 max-w-[85%]";
+      loadingBubble.innerText = "Thinking...";
+      chatBox.appendChild(loadingBubble);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      // Build Gemini API Request Payload
+      const parts = [];
+      const userLocale = navigator.language || "en-US";
+      
+      parts.push({ 
+        text: `Respond to the user in their preferred language (${userLocale}). Question: ${userText}` 
       });
 
-      const data = await response.json();
-      const botMsgEl = document.getElementById(loadingId);
-
-      if (data.candidates && data.candidates[0].content.parts[0].text) {
-        botMsgEl.innerText = data.candidates[0].content.parts[0].text;
-      } else {
-        botMsgEl.innerText = "Sorry, I couldn't process that question right now. Please check your API key!";
+      if (currentAttachment) {
+        parts.push({
+          inlineData: {
+            mimeType: currentAttachment.mimeType,
+            data: currentAttachment.base64
+          }
+        });
       }
-    } catch (err) {
-      document.getElementById(loadingId).innerText = "Error connecting to AI service.";
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts }] })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          loadingBubble.innerText = "Error: " + data.error.message;
+        } else {
+          const aiReply = data.candidates[0].content.parts[0].text;
+          loadingBubble.innerText = aiReply;
+
+          // Increment Usage
+          usageData.count++;
+          localStorage.setItem('sb_usage', JSON.stringify(usageData));
+          updateUsageBadge();
+        }
+      } catch (err) {
+        loadingBubble.innerText = "Failed to reach AI. Please check your network connection and API key.";
+      }
+
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
-  }
-
-  function appendMessage(text, sender) {
-    const chatBox = document.getElementById('chat-box');
-    const msgDiv = document.createElement('div');
-    const id = 'msg-' + Date.now();
-    msgDiv.id = id;
-
-    if (sender === 'user') {
-      msgDiv.className = 'bg-indigo-600 text-white p-3 rounded-2xl max-w-xs ml-auto text-sm my-2';
-    } else {
-      msgDiv.className = 'bg-white text-slate-800 p-3 rounded-2xl max-w-xs text-sm my-2 border border-slate-100';
-    }
-
-    msgDiv.innerText = text;
-    chatBox.appendChild(msgDiv);
-    chatBox.scrollTop = chatBox.scrollHeight;
-    return id;
-  }
-
-  function handlePayment() {
-    alert("Payment gateway coming soon!");
-  }
-</script>
-
   </script>
 </body>
 </html>
